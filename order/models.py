@@ -1,0 +1,141 @@
+from django.db import models
+from core.models import BaseModel
+from auth.models import User
+from product.models import ProductVariant
+
+
+# Create your models here.
+class Order(BaseModel):
+    class OrderStatus(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        CONFIRMED = "CONFIRMED", "Confirmed"
+        PROCESSING = "PROCESSING", "Processing"
+        SHIPPED = "SHIPPED", "Shipped"
+        DELIVERED = "DELIVERED", "Delivered"
+        CANCELLED = "CANCELLED", "Cancelled"
+        FAILED = "FAILED", "Failed"
+        REFUNDED = "REFUNDED", "Refunded"
+
+    class PaymentStatus(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        SUCCESS = "SUCCESS", "Success"
+        FAILED = "FAILED", "Failed"
+        REFUNDED = "REFUNDED", "Refunded"
+
+    customer = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="orders"
+    )
+    order_number = models.CharField(max_length=50, unique=True)
+    status = models.CharField(
+        max_length=20, choices=OrderStatus.choices, default=OrderStatus.PENDING
+    )
+    payment_status = models.CharField(
+        max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING
+    )
+    subtotal = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    tax_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    shipping_charge = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    discount_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    grand_total = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+        indexes = [
+            models.Index(fields=["order_number"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["payment_status"]),
+        ]
+
+    def __str__(self):
+        return self.order_number
+
+
+class OrderItems(BaseModel):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
+    variant = models.ForeignKey(
+        ProductVariant, on_delete=models.PROTECT, related_name="order_items"
+    )
+    qunatity = models.PositiveSmallIntegerField()
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    total_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["order", "variant"],
+                name="unique_order_variant",
+            ),
+        ]
+    def __str__(self):
+        return f"{self.order.order_number}-{self.variant.sku}"
+
+
+class Return(BaseModel):
+    class ReturnStatus(models.TextChoices):
+        REQUESTED = "REQUESTED", "Requested"
+        APPROVED = "APPROVED", "Approved"
+        PICKED_UP = "PICKED_UP", "Picked Up"
+        RECEIVED = "RECEIVED", "Received"
+        COMPLETED = "COMPLETED", "Completed"
+        REJECTED = "REJECTED", "Rejected"
+        REFUNDED = "REFUNDED", "Refunded"
+
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="returns")
+    status = models.CharField(max_length=20, choices=ReturnStatus.choices, default=ReturnStatus.REQUESTED)
+    reason = models.TextField()
+    refund_amount = models.DecimalField(max_digits=12,decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"Return {self.order.order_number}"
+
+class ReturnItem(BaseModel):
+    class ConditionType(models.TextChoices):
+        GOOD = "GOOD", "Good"
+        DAMAGED = "DAMAGED", "Damaged"
+        MISSING = "MISSING", "Missing"
+    order_return = models.ForeignKey(
+        Return, on_delete=models.CASCADE, related_name="items"
+    )
+    variant = models.ForeignKey(
+        ProductVariant, on_delete=models.PROTECT, related_name="return_items"
+    )
+    quantity = models.PositiveSmallIntegerField()
+    condition_type = models.CharField(max_length=20, choices=ConditionType.choices)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["order_return", "variant"],
+                name="unique_return_variant",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.variant.sku} ({self.quantity})"

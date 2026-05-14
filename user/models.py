@@ -1,16 +1,8 @@
 from django.db import models
-from django.core.validators import RegexValidator
 from django.conf import settings
-from core.models import BaseModel
+from core.models import BaseModel, phone_validation, pincode_validation
 from product.models import ProductVariant
 
-phone_validation = RegexValidator(
-    regex=r"^[6-9]\d{9}$", message="Enter a valid 10-digit number."
-)
-
-pincode_validation = RegexValidator(
-    regex=r"^\d{6}$", message="Enter a valid 6-digit pincode."
-)
 
 
 # Create your models here.
