@@ -87,7 +87,7 @@ class InventoryTransaction(BaseModel):
         ]
 
     def __str__(self):
-        return f'{self.variant.sku} - {self.transaction_type}'  
+        return f"{self.variant.sku} - {self.transaction_type}"
 
 
 class StockTransfer(BaseModel):
@@ -96,23 +96,22 @@ class StockTransfer(BaseModel):
         SHIPPED = "SHIPPED", "Shipped"
         RECEIVED = "RECEIVED", "Received"
         CANCELLED = "CANCELLED", "Cancelled"
+
     from_warehouse = models.ForeignKey(
         Warehouse, on_delete=models.PROTECT, related_name="outgoing_transfers"
     )
     to_warehouse = models.ForeignKey(
         Warehouse, on_delete=models.PROTECT, related_name="incoming_transfers"
     )
-    status = models.CharField(max_length=20,choices=TransferStatus.choices)
-    shipped_at = models.DateTimeField(null=True,blank=True)
-    receiced_at = models.DateTimeField(null=True,blank=True)
+    status = models.CharField(max_length=20, choices=TransferStatus.choices)
+    shipped_at = models.DateTimeField(null=True, blank=True)
+    receiced_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
 
     def clean(self):
 
         if self.from_warehouse == self.to_warehouse:
-            raise ValidationError(
-                "Source and destination warehouse cannot be same."
-            )
+            raise ValidationError("Source and destination warehouse cannot be same.")
 
     def __str__(self):
         return f"{self.from_warehouse.name} - {self.to_warehouse}"
@@ -135,6 +134,5 @@ class StockTransferItems(BaseModel):
             )
         ]
 
-
     def __str__(self):
-        return f'{self.variant.sku} - {self.quantity}'
+        return f"{self.variant.sku} - {self.quantity}"

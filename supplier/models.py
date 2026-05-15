@@ -5,7 +5,7 @@ from product.models import ProductVariant
 from django.core.exceptions import ValidationError
 
 
-class Suppliers(BaseModel):
+class Supplier(BaseModel):
     class SupplierStatus(models.TextChoices):
         ACTIVE = "ACTIVE", "Active"
         INACTIVE = "INACTIVE", "Inactive"
@@ -23,7 +23,10 @@ class Suppliers(BaseModel):
     class Meta:
         ordering = ["name"]
 
-        indexes = [models.Index(fields=["name"]), models.Index(fields=["email"])]
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["created_at"]),
+        ]
 
     def __str__(self):
         return self.name
@@ -38,7 +41,7 @@ class PurchaseOrder(BaseModel):
         CANCELLED = "CANCELLED", "Cancelled"
 
     supplier = models.ForeignKey(
-        Suppliers, on_delete=models.PROTECT, related_name="purchase_orders"
+        Supplier, on_delete=models.PROTECT, related_name="purchase_orders"
     )
     warehouse = models.ForeignKey(
         Warehouse, on_delete=models.PROTECT, related_name="purchase_orders"
@@ -56,8 +59,11 @@ class PurchaseOrder(BaseModel):
         ordering = ["-created_at"]
 
         indexes = [
-            models.Index(fields=["po_number"]),
             models.Index(fields=["status"]),
+            models.Index(fields=["supplier"]),
+            models.Index(fields=["warehouse"]),
+            models.Index(fields=["ordered_at"]),
+            models.Index(fields=["supplier", "status"]),
         ]
 
     def __str__(self):
@@ -84,8 +90,8 @@ class PurchaseOrderItem(BaseModel):
         ]
 
     def clean(self):
-        if self.received_quantity != self.ordered_quantity:
-            raise ValidationError("Received quantity and ordered quantity is not same.")
+        if self.received_quantity > self.ordered_quantity:
+            raise ValidationError("Received quantity cannot exceed ordered quantity.")
 
     def __str__(self):
-        return
+        return f"{self.purchase_order.po_number} - {self.variant}"

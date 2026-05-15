@@ -4,8 +4,6 @@ from core.models import BaseModel, phone_validation, pincode_validation
 from product.models import ProductVariant
 
 
-
-# Create your models here.
 class UserAddress(BaseModel):
     ADDRESS_TYPE = (("home", "Home"), ("work", "Work"), ("other", "Other"))
     user = models.ForeignKey(
@@ -46,14 +44,19 @@ class UserAddress(BaseModel):
 
 
 class WishlistItem(BaseModel):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,related_name='wishlist_items')
-    variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, related_name="wishlisted_by")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="wishlist_items",
+    )
+    variant = models.ForeignKey(
+        ProductVariant, on_delete=models.CASCADE, related_name="wishlisted_by"
+    )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "variant"],
-                name="unique_user_variant_wishlist"
+                fields=["user", "variant"], name="unique_user_variant_wishlist"
             )
         ]
 
@@ -65,4 +68,4 @@ class WishlistItem(BaseModel):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f'{self.user} - {self.variant.sku}'
+        return f"{self.user} - {self.variant.sku}"

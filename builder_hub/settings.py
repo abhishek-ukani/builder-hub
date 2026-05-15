@@ -53,7 +53,10 @@ INSTALLED_APPS = [
     "category",
     "product",
     "user",
-    "brand"
+    "brand",
+    "supplier",
+    "inventory",
+    "order",
 ]
 
 MIDDLEWARE = [
