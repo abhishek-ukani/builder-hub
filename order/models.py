@@ -139,3 +139,31 @@ class ReturnItem(BaseModel):
 
     def __str__(self):
         return f"{self.variant.sku} ({self.quantity})"
+
+
+class Delivery(BaseModel):
+    class DeliveryStatus(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        PICKED_UP = "PICKED_UP", "Picked Up"
+        IN_TRANSIT = "IN_TRANSIT", "In Transit"
+        DELIVERED = "DELIVERED", "Delivered"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    class DeliveryType(models.TextChoices):
+        DIRECT_FROM_FARMER = "DIRECT", "Direct from Farmer"
+        FROM_WAREHOUSE = "WAREHOUSE", "From Warehouse"
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="deliveries")
+    status = models.CharField(
+        max_length=20, choices=DeliveryStatus.choices, default=DeliveryStatus.PENDING
+    )
+    delivery_type = models.CharField(max_length=20, choices=DeliveryType.choices)
+    tracking_number = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    distance = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, help_text="Distance in km"
+    )
+    estimated_delivery_at = models.DateTimeField(null=True, blank=True)
+    actual_delivery_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Delivery for {self.order.order_number} - {self.get_status_display()}"

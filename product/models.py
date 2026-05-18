@@ -8,25 +8,26 @@ from django.core.exceptions import ValidationError
 from django.utils.crypto import get_random_string
 from decimal import Decimal
 
+class UnitTypes(models.TextChoices):
+        GRAMS = 'gm', 'Grams'
+        KILOGRAMS = 'kg', 'KiloGrams'
+        PIECES = 'pc', 'Pieces'
 
 class Product(BaseModel):
     category = models.ForeignKey(
         Category, on_delete=models.PROTECT, related_name="products"
     )
-    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name="products")
     title = models.CharField(max_length=225)
     sort_description = models.TextField(blank=True)
     description = models.TextField(blank=True)
     slug = models.SlugField(unique=True, max_length=255)
     is_active = models.BooleanField(default=True)
-    is_featured = models.BooleanField(default=False)
+    quantity = models.CharField(max_length=20,choices=UnitTypes.choices, default=UnitTypes.GRAMS)
 
     class Meta:
         indexes = [
-            models.Index(fields=["is_featured"]),
             models.Index(fields=["is_active"]),
             models.Index(fields=["category"]),
-            models.Index(fields=["brand"]),
         ]
 
     def save(self, *args, **kwargs):
@@ -40,6 +41,15 @@ class Product(BaseModel):
 
     def __str__(self):
         return self.title
+    
+class Thali(BaseModel):
+    name = models.CharField(max_length=100)
+    item = models.ForeignKey(Product,on_delete=models.PROTECT,related_name="thali")
+    quantity = models.CharField(max_length=20,choices=UnitTypes.choices, default=UnitTypes.GRAMS)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
 
 
 class ProductVariant(BaseModel):
