@@ -8,27 +8,27 @@ from django.core.exceptions import ValidationError
 from django.utils.crypto import get_random_string
 from decimal import Decimal
 
+
 class UnitTypes(models.TextChoices):
-        GRAMS = 'gm', 'Grams'
-        KILOGRAMS = 'kg', 'KiloGrams'
-        PIECES = 'pc', 'Pieces'
+    GRAMS = "gm", "Grams"
+    KILOGRAMS = "kg", "KiloGrams"
+    PIECES = "pc", "Pieces"
+
 
 class Product(BaseModel):
     category = models.ForeignKey(
-        Category, on_delete=models.PROTECT, related_name="products"
+        Category, on_delete=models.PROTECT, related_name="products", db_index=True
     )
-    title = models.CharField(max_length=225)
+    title = models.CharField(max_length=225, unique=True)
     sort_description = models.TextField(blank=True)
     description = models.TextField(blank=True)
     slug = models.SlugField(unique=True, max_length=255)
-    is_active = models.BooleanField(default=True)
-    quantity = models.CharField(max_length=20,choices=UnitTypes.choices, default=UnitTypes.GRAMS)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
-        indexes = [
-            models.Index(fields=["is_active"]),
-            models.Index(fields=["category"]),
-        ]
+        ordering = ["title"]
+        verbose_name = "Product"
+        verbose_name_plural = "Products"
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -41,15 +41,6 @@ class Product(BaseModel):
 
     def __str__(self):
         return self.title
-    
-class Thali(BaseModel):
-    name = models.CharField(max_length=100)
-    item = models.ForeignKey(Product,on_delete=models.PROTECT,related_name="thali")
-    quantity = models.CharField(max_length=20,choices=UnitTypes.choices, default=UnitTypes.GRAMS)
-    is_active = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.name
 
 
 class ProductVariant(BaseModel):
@@ -96,6 +87,10 @@ class ProductVariant(BaseModel):
         validators=[MinValueValidator(Decimal("0.00"))],
     )
     is_active = models.BooleanField(default=True, db_index=True)
+    quantity_type = models.CharField(
+        max_length=20, choices=UnitTypes.choices, default=UnitTypes.GRAMS
+    )
+    quantity = models.PositiveSmallIntegerField()
 
     class Meta:
         ordering = ["-created_at"]
@@ -137,6 +132,36 @@ class ProductVariant(BaseModel):
 
     def __str__(self):
         return f"{self.product} - {self.sku}"
+
+
+class Thali(BaseModel):
+    name = models.CharField(max_length=100, unique=True)
+    item = models.ForeignKey(
+        ProductVariant, on_delete=models.PROTECT, related_name="thali"
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal(("0.00")))],
+    )
+    compare_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+    cost_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+
+    def __str__(self):
+        return self.name
 
 
 def product_image_upload_path(instance, filename):

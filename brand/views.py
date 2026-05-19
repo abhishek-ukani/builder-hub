@@ -1,9 +1,16 @@
-from django.shortcuts import render
-from brand.serializers import BrandSerializer
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser
+from core.views import DualSerializerViewSet
 from brand.models import Brand
+from brand.serializers import BrandRequestSerializer, BrandResponseSerializer
 
-class Brand(ModelViewSet):
+class BrandViewSet(DualSerializerViewSet):
     queryset = Brand.objects.all()
-    serializer_class = BrandSerializer
-     
+    request_serializer_class = BrandRequestSerializer
+    response_serializer_class = BrandResponseSerializer
+    search_fields = ['name', 'description']
+    ordering_fields = ['name', 'created_at']
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminUser()]
+        return [IsAuthenticatedOrReadOnly()]

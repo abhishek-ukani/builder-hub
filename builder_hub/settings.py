@@ -155,6 +155,15 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "login_fail": "5/hour",
     },
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+    "DEFAULT_FILTER_BACKENDS": [
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
+    ],
 }
 
 
@@ -190,5 +199,7 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
     "http://localhost:5174",
+    "http://localhost:3000",
 ]
