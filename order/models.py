@@ -1,8 +1,8 @@
 from django.db import models
 from core.models import BaseModel
 from auth.models import User
-from product.models import ProductVariant
-
+from product.models import ProductVariant, MealSlot
+from user.models import UserAddress
 
 # Create your models here.
 class Order(BaseModel):
@@ -61,6 +61,15 @@ class Order(BaseModel):
         decimal_places=2,
         default=0,
     )
+    meal_slot = models.ForeignKey(
+        MealSlot, on_delete=models.PROTECT, null=True, blank=True, related_name="orders"
+    )
+    scheduled_delivery_time = models.DateTimeField(null=True, blank=True)
+    delivery_address = models.ForeignKey(
+        UserAddress, on_delete=models.PROTECT,   # or inline fields
+        null=True, blank=True
+    )
+    special_instructions = models.TextField(blank=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -86,6 +95,7 @@ class OrderItems(BaseModel):
         max_digits=12,
         decimal_places=2,
     )
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -93,6 +103,7 @@ class OrderItems(BaseModel):
                 name="unique_order_variant",
             ),
         ]
+
     def __str__(self):
         return f"{self.order.order_number}-{self.variant.sku}"
 
@@ -108,18 +119,22 @@ class Return(BaseModel):
         REFUNDED = "REFUNDED", "Refunded"
 
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="returns")
-    status = models.CharField(max_length=20, choices=ReturnStatus.choices, default=ReturnStatus.REQUESTED)
+    status = models.CharField(
+        max_length=20, choices=ReturnStatus.choices, default=ReturnStatus.REQUESTED
+    )
     reason = models.TextField()
-    refund_amount = models.DecimalField(max_digits=12,decimal_places=2, default=0)
+    refund_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     def __str__(self):
         return f"Return {self.order.order_number}"
+
 
 class ReturnItem(BaseModel):
     class ConditionType(models.TextChoices):
         GOOD = "GOOD", "Good"
         DAMAGED = "DAMAGED", "Damaged"
         MISSING = "MISSING", "Missing"
+
     order_return = models.ForeignKey(
         Return, on_delete=models.CASCADE, related_name="items"
     )
@@ -153,14 +168,22 @@ class Delivery(BaseModel):
         DIRECT_FROM_FARMER = "DIRECT", "Direct from Farmer"
         FROM_WAREHOUSE = "WAREHOUSE", "From Warehouse"
 
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="deliveries")
+    order = models.ForeignKey(
+        Order, on_delete=models.CASCADE, related_name="deliveries"
+    )
     status = models.CharField(
         max_length=20, choices=DeliveryStatus.choices, default=DeliveryStatus.PENDING
     )
     delivery_type = models.CharField(max_length=20, choices=DeliveryType.choices)
-    tracking_number = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    tracking_number = models.CharField(
+        max_length=100, unique=True, null=True, blank=True
+    )
     distance = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True, help_text="Distance in km"
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Distance in km",
     )
     estimated_delivery_at = models.DateTimeField(null=True, blank=True)
     actual_delivery_at = models.DateTimeField(null=True, blank=True)

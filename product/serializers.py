@@ -42,7 +42,7 @@ class ProductMediaRequestSerializer(serializers.ModelSerializer):
 class ProductMediaResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductMedia
-        fields = '__all__'
+        fields = ('variant', 'image', 'alt_text', 'is_primary', 'sort_order')
 
 class ProductVariantRequestSerializer(serializers.ModelSerializer):
     class Meta:
@@ -68,7 +68,7 @@ class ProductVariantResponseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductVariant
-        fields = '__all__'
+        fields = ('product', 'stock_status', 'price', 'compare_price', 'is_active', 'quantity',"quantity_type", 'images', 'discount_percentage')
 
 class ProductRequestSerializer(serializers.ModelSerializer):
     class Meta:
@@ -77,7 +77,7 @@ class ProductRequestSerializer(serializers.ModelSerializer):
 
 class ProductResponseSerializer(serializers.ModelSerializer):
     variants = ProductVariantResponseSerializer(many=True, read_only=True)
-    images = ProductMediaResponseSerializer(many=True, read_only=True)
+    # images = ProductMediaResponseSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product

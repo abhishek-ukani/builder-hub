@@ -16,6 +16,10 @@ class UnitTypes(models.TextChoices):
 
 
 class Product(BaseModel):
+    class ProductType(models.TextChoices):
+        SINGLE_ITEM = "single", "Single Item"     
+        THALI_COMPONENT = "component", "Thali Component" 
+        THALI = "thali", "Thali"     
     category = models.ForeignKey(
         Category, on_delete=models.PROTECT, related_name="products", db_index=True
     )
@@ -24,6 +28,7 @@ class Product(BaseModel):
     description = models.TextField(blank=True)
     slug = models.SlugField(unique=True, max_length=255)
     is_active = models.BooleanField(default=True, db_index=True)
+    product_type = models.CharField(max_length=20, choices=ProductType.choices, default=ProductType.SINGLE_ITEM)
 
     class Meta:
         ordering = ["title"]
@@ -136,9 +141,6 @@ class ProductVariant(BaseModel):
 
 class Thali(BaseModel):
     name = models.CharField(max_length=100, unique=True)
-    item = models.ForeignKey(
-        ProductVariant, on_delete=models.PROTECT, related_name="thali"
-    )
     is_active = models.BooleanField(default=True, db_index=True)
     price = models.DecimalField(
         max_digits=10,
@@ -163,6 +165,28 @@ class Thali(BaseModel):
     def __str__(self):
         return self.name
 
+class ThaliComponentGroup(BaseModel):
+    class SelectionType(models.TextChoices):
+        SINGLE = "single", "Choose One"
+        MULTIPLE = "multiple", "Choose Many"
+
+    thali = models.ForeignKey(Thali, on_delete=models.CASCADE, related_name="component_groups")
+    name = models.CharField(max_length=100)  # "Sabji Choice", "Bread", "Extras"
+    min_selections = models.PositiveSmallIntegerField(default=1)
+    max_selections = models.PositiveSmallIntegerField(default=1)
+    is_required = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+class ThaliComponentOption(BaseModel):
+    group = models.ForeignKey(ThaliComponentGroup, on_delete=models.CASCADE, related_name="options")
+    product_variant = models.ForeignKey(ProductVariant, on_delete=models.PROTECT)
+    extra_charge = models.DecimalField(max_digits=8, decimal_places=2, default=0)  # if premium item
+    is_default = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.product_variant.sku
 
 def product_image_upload_path(instance, filename):
     return f"products/{instance.product.id}/{filename}"
@@ -232,7 +256,7 @@ class AttributeValue(BaseModel):
 
 class VariantAttributeValue(BaseModel):
     variant = models.ForeignKey(
-        ProductVariant, on_delete=models.CASCADE, related_name="attribut_values"
+        ProductVariant, on_delete=models.CASCADE, related_name="attribute_values"
     )
     attribute_value = models.ForeignKey(
         AttributeValue, on_delete=models.CASCADE, related_name="variant_values"
@@ -240,3 +264,14 @@ class VariantAttributeValue(BaseModel):
 
     class Meta:
         unique_together = ("variant", "attribute_value")
+
+
+class MealSlot(BaseModel):
+    name = models.CharField(max_length=50)   # "Lunch", "Dinner"
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    cutoff_time = models.TimeField()  # last time to place order
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.start_time.strftime('%H:%M')} to {self.end_time.strftime('%H:%M')} "
