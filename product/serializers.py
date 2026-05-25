@@ -3,6 +3,7 @@ from product.models import (
     Product, Thali, ProductVariant, ProductMedia,
     Attribute, AttributeValue, VariantAttributeValue
 )
+from category.models import Category
 
 class AttributeRequestSerializer(serializers.ModelSerializer):
     class Meta:
@@ -71,17 +72,18 @@ class ProductVariantResponseSerializer(serializers.ModelSerializer):
         fields = ('product', 'stock_status', 'price', 'compare_price', 'is_active', 'quantity',"quantity_type", 'images', 'discount_percentage')
 
 class ProductRequestSerializer(serializers.ModelSerializer):
+    slug = serializers.SlugField(allow_null=True, required=False)
     class Meta:
         model = Product
-        exclude = ['slug', 'created_at', 'updated_at', 'id']
+        exclude = ['created_at', 'updated_at', 'id']
 
 class ProductResponseSerializer(serializers.ModelSerializer):
     variants = ProductVariantResponseSerializer(many=True, read_only=True)
-    # images = ProductMediaResponseSerializer(many=True, read_only=True)
+    images = ProductMediaResponseSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
-        fields = '__all__'
+        fields = ('__all__')
 
 class ThaliRequestSerializer(serializers.ModelSerializer):
     class Meta:
@@ -92,3 +94,16 @@ class ThaliResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Thali
         fields = '__all__'
+
+
+class CategoryWithProductsSerializer(serializers.ModelSerializer):
+    products = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug', 'products']
+
+    def get_products(self, instance):
+        # Access the custom 'to_attr' memory list instead of executing a new DB query
+        products = getattr(instance, 'initial_products', [])
+        return ProductResponseSerializer(products, many=True, context=self.context).data

@@ -57,10 +57,12 @@ INSTALLED_APPS = [
     "supplier",
     "inventory",
     "order",
+    "debug_toolbar"
 ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+    # "debug_toolbar.middleware.DebugToolbarMiddleware",    
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -202,4 +204,41 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
+
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+    }
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+
+    'loggers': {
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+    "localhost",
+]       
+
+CORS_ALLOW_CREDENTIALS = True
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR
+CORS_ALLOW_ALL_ORIGINS = True   # dev only

@@ -19,7 +19,6 @@ class ProductVariantInline(admin.TabularInline):
         "sku",
         "quantity",
         "quantity_type",
-        "weight",
         "price",
         "compare_price",
         "cost_price",

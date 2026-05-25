@@ -13,6 +13,7 @@ class UnitTypes(models.TextChoices):
     GRAMS = "gm", "Grams"
     KILOGRAMS = "kg", "KiloGrams"
     PIECES = "pc", "Pieces"
+    MILLILITERS = "ml", "Milliliters"
 
 
 class Product(BaseModel):
@@ -56,13 +57,6 @@ class ProductVariant(BaseModel):
 
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="variants"
-    )
-    weight = models.DecimalField(
-        max_digits=8,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(Decimal("0.00"))],
     )
     stock_status = models.CharField(
         max_length=20,
@@ -212,13 +206,30 @@ class ProductMedia(BaseModel):
         ordering = ["sort_order", "id"]
 
         constraints = [
+            # Prevent duplicate image for same variant
             models.UniqueConstraint(
-                fields=["variant", "image"], name="unique_variant_image"
+                fields=["variant", "image"],
+                name="unique_variant_image",
             ),
+
+            # One primary image for product-level images
             models.UniqueConstraint(
                 fields=["product"],
-                condition=models.Q(is_primary=True),
+                condition=models.Q(
+                    is_primary=True,
+                    variant__isnull=True,
+                ),
                 name="unique_primary_product_image",
+            ),
+
+            # One primary image per variant
+            models.UniqueConstraint(
+                fields=["variant"],
+                condition=models.Q(
+                    is_primary=True,
+                    variant__isnull=False,
+                ),
+                name="unique_primary_variant_image",
             ),
         ]
 
