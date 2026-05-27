@@ -5,11 +5,14 @@ from product.models import ProductVariant
 
 
 class UserAddress(BaseModel):
-    ADDRESS_TYPE = (("home", "Home"), ("work", "Work"), ("other", "Other"))
+    class AddressType(models.TextChoices):
+        HOME = "home", "Home"
+        WORK = "work", "Work"
+        OTHER = "other", "Other"
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="addresses"
     )
-    address_type = models.CharField(max_length=20, choices=ADDRESS_TYPE, default="home")
+    address_type = models.CharField(max_length=20, choices=AddressType.choices, default=AddressType.HOME)
     full_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=10, validators=[phone_validation])
     address_line_1 = models.CharField(blank=True, max_length=255)

@@ -57,7 +57,8 @@ INSTALLED_APPS = [
     "supplier",
     "inventory",
     "order",
-    "debug_toolbar"
+    "debug_toolbar",
+    "rating"
 ]
 
 MIDDLEWARE = [
@@ -228,7 +229,7 @@ LOGGING = {
     'loggers': {
         'django.db.backends': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'WARNING',
         },
     },
 }

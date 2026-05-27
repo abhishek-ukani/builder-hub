@@ -89,7 +89,7 @@ class OrderItems(BaseModel):
     variant = models.ForeignKey(
         ProductVariant, on_delete=models.PROTECT, related_name="order_items"
     )
-    qunatity = models.PositiveSmallIntegerField()
+    quantity = models.PositiveSmallIntegerField()
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(
         max_digits=12,

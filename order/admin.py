@@ -13,6 +13,7 @@ class OrderItemsInline(admin.TabularInline):
     extra = 0
     readonly_fields = ("total_price",)
     raw_id_fields = ("variant",)
+    exclude = ("created_at", "updated_at")
 
 
 class ReturnItemInline(admin.TabularInline):
@@ -37,6 +38,7 @@ class OrderAdmin(admin.ModelAdmin):
         "grand_total",
         "created_at",
     )
+    readonly_fields = ('created_at', 'updated_at') 
     list_filter = ("status", "payment_status", "created_at")
     search_fields = ("order_number", "customer__username", "customer__email")
     ordering = ("-created_at",)
@@ -50,11 +52,13 @@ class OrderItemsAdmin(admin.ModelAdmin):
     list_display = (
         "order",
         "variant",
-        "qunatity",
+        "quantity",
         "unit_price",
         "total_price",
+        "created_at",
     )
-    list_filter = ("order", "variant")
+    readonly_fields = ('created_at', 'updated_at') 
+    list_filter = ("variant",)
     search_fields = ("order__order_number", "variant__sku")
     raw_id_fields = ("order", "variant")
 

@@ -15,6 +15,7 @@ class CustomUserAdmin(UserAdmin):
         "is_superuser",
         "date_joined",
     )
+    list_per_page = 20
     list_filter = (
         "user_type",
         "is_email_verified",
