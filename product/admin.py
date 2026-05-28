@@ -24,6 +24,7 @@ class ProductVariantInline(admin.TabularInline):
         "cost_price",
         "stock_status",
         "is_active",
+        "is_thali_component",
     )
     extra = 1
     raw_id_fields = ("product",)

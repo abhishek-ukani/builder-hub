@@ -69,7 +69,7 @@ class ProductVariantResponseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductVariant
-        fields = ('product', 'stock_status', 'price', 'compare_price', 'is_active', 'quantity',"quantity_type", 'images', 'discount_percentage')
+        fields = ("id",'product', 'stock_status', 'price', 'compare_price', 'is_active', 'quantity',"quantity_type", 'images', 'discount_percentage')
 
 class ProductRequestSerializer(serializers.ModelSerializer):
     slug = serializers.SlugField(allow_null=True, required=False)

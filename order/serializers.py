@@ -2,9 +2,12 @@ from rest_framework import serializers
 from order.models import Order, OrderItems, Return, ReturnItem, Delivery
 
 class OrderItemsRequestSerializer(serializers.ModelSerializer):
+    unit_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    total_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+
     class Meta:
         model = OrderItems
-        exclude = ['created_at', 'updated_at', 'id']
+        exclude = ['created_at', 'updated_at', 'id', 'order']
 
 class OrderItemsResponseSerializer(serializers.ModelSerializer):
     class Meta:
@@ -12,9 +15,16 @@ class OrderItemsResponseSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class OrderRequestSerializer(serializers.ModelSerializer):
+    items = OrderItemsRequestSerializer(many=True, write_only=True, required=True)
+
     class Meta:
         model = Order
         exclude = ['order_number', 'customer', 'created_at', 'updated_at', 'id']
+
+    def validate_items(self, value):
+        if not isinstance(value, list) or len(value) == 0:
+            raise serializers.ValidationError("Order must include at least one item.")
+        return value
 
 class OrderResponseSerializer(serializers.ModelSerializer):
     items = OrderItemsResponseSerializer(many=True, read_only=True)

@@ -1,14 +1,21 @@
+from datetime import timezone, datetime
+
 from rest_framework.permissions import IsAuthenticated
 from core.views import DualSerializerViewSet
 from order.models import Order, OrderItems, Return, ReturnItem, Delivery
 from order.serializers import (
     OrderRequestSerializer, OrderResponseSerializer,
-    OrderItemsRequestSerializer, OrderItemsResponseSerializer,
     ReturnRequestSerializer, ReturnResponseSerializer,
     ReturnItemRequestSerializer, ReturnItemResponseSerializer,
     DeliveryRequestSerializer, DeliveryResponseSerializer
 )
 import uuid
+from django.db import transaction
+from decimal import Decimal
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
+from order.services.order_service import generate_order_number
 
 class OrderViewSet(DualSerializerViewSet):
     queryset = Order.objects.all().prefetch_related('items')
@@ -22,16 +29,57 @@ class OrderViewSet(DualSerializerViewSet):
         user = self.request.user
         if user.is_staff:
             return self.queryset
-        return self.queryset.filter(customer=user)
+        return self.queryset.filter(customer=user)        
 
-    def perform_create(self, serializer):
-        serializer.save(customer=self.request.user, order_number=str(uuid.uuid4().hex)[:10].upper())
+    def create(self, request, *args, **kwargs):
+        city_prefix = request.data.get('city')[:2].upper()
+        serializer = self.request_serializer_class(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        items_data = serializer.validated_data.pop('items', [])
 
-class OrderItemsViewSet(DualSerializerViewSet):
-    queryset = OrderItems.objects.all()
-    request_serializer_class = OrderItemsRequestSerializer
-    response_serializer_class = OrderItemsResponseSerializer
-    permission_classes = [IsAuthenticated]
+        with transaction.atomic():
+            order = serializer.save(customer=request.user, order_number=generate_order_number(city_prefix, datetime.now(timezone.utc)))
+
+            subtotal = Decimal('0.00')
+            for item in items_data:
+                variant = item.get('variant')
+                quantity = item.get('quantity')
+                unit_price = item.get('unit_price')
+                total_price = item.get('total_price') if item.get('total_price') is not None else (Decimal(unit_price) * Decimal(quantity))
+
+                OrderItems.objects.create(
+                    order=order,
+                    variant=variant,
+                    quantity=quantity,
+                    unit_price=unit_price,
+                    total_price=total_price,
+                )
+
+                subtotal += Decimal(total_price)
+
+            # update order totals (tax, shipping, discount may be set from request)
+            order.subtotal = subtotal
+            order.save()
+
+        resp_serializer = self.response_serializer_class(order, context={'request': request})
+        return Response(resp_serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            raise PermissionDenied('You do not have permission to update orders.')
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            raise PermissionDenied('You do not have permission to update orders.')
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            raise PermissionDenied('You do not have permission to delete orders.')
+        return super().destroy(request, *args, **kwargs)
+
+
 
 class ReturnViewSet(DualSerializerViewSet):
     queryset = Return.objects.all().prefetch_related('items')

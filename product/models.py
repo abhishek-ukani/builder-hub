@@ -90,6 +90,7 @@ class ProductVariant(BaseModel):
         max_length=20, choices=UnitTypes.choices, default=UnitTypes.GRAMS
     )
     quantity = models.PositiveSmallIntegerField()
+    is_thali_component = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-created_at"]
