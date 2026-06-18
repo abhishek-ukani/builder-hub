@@ -1,7 +1,7 @@
 from django.db import models
 from core.models import BaseModel
 from auth.models import User
-from product.models import ProductVariant, MealSlot
+from product.models import ProductVariant, MealSlot, Thali, ThaliComponentOption
 from user.models import UserAddress
 
 # Create your models here.
@@ -87,7 +87,10 @@ class Order(BaseModel):
 class OrderItems(BaseModel):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
     variant = models.ForeignKey(
-        ProductVariant, on_delete=models.PROTECT, related_name="order_items"
+        ProductVariant, on_delete=models.PROTECT, related_name="order_items", null=True, blank=True
+    )
+    thali = models.ForeignKey(
+        Thali, on_delete=models.PROTECT, related_name="order_items", null=True, blank=True
     )
     quantity = models.PositiveSmallIntegerField()
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -100,12 +103,34 @@ class OrderItems(BaseModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["order", "variant"],
+                condition=models.Q(variant__isnull=False),
                 name="unique_order_variant",
             ),
         ]
 
     def __str__(self):
-        return f"{self.order.order_number}-{self.variant.sku}"
+        item_name = self.variant.sku if self.variant else f"Thali-{self.thali.name}"
+        return f"{self.order.order_number}-{item_name}"
+
+
+class OrderItemThaliOption(BaseModel):
+    order_item = models.ForeignKey(
+        OrderItems, on_delete=models.CASCADE, related_name="thali_options"
+    )
+    option = models.ForeignKey(
+        ThaliComponentOption, on_delete=models.PROTECT, related_name="order_thali_options"
+    )
+
+    class Meta:
+        verbose_name = "Order Item Thali Option"
+        verbose_name_plural = "Order Item Thali Options"
+        unique_together = ("order_item", "option")
+
+    def __str__(self):
+        component_group = self.option.group.name
+        product_name = self.option.product_variant.product.title
+        return f"{self.order_item.order.order_number} - {component_group}: {product_name}"
+
 
 
 class Return(BaseModel):

@@ -11,6 +11,41 @@ from product.models import (
     ThaliComponentOption,
     MealSlot,
 )
+from django.db.models import Avg
+from django.utils.html import format_html
+import nested_admin
+
+
+class ThaliComponentOptionInline(nested_admin.NestedTabularInline):
+    model = ThaliComponentOption
+    extra = 1
+    fk_name = 'group'
+    readonly_fields=("created_at", "updated_at")
+    # Use autocomplete to quickly search through thousands of Product Variants
+    autocomplete_fields = ['product_variant'] 
+
+# 2. The Middle Level: Component Groups inside the Thali
+class ThaliComponentGroupInline(nested_admin.NestedStackedInline):
+    model = ThaliComponentGroup
+    extra = 1
+    fk_name = 'thali'
+    readonly_fields=("created_at", "updated_at")
+
+    # Nest the options inside this group layout
+    inlines = [ThaliComponentOptionInline]
+
+# 3. The Top Level: The Main Thali Controller
+@admin.register(Thali)
+class ThaliAdmin(nested_admin.NestedModelAdmin):
+    list_display = ('name', 'price', 'compare_price', 'cost_price', 'is_active')
+    list_editable = ('is_active', 'price') # Edit basic prices directly from the list view
+    list_filter = ('is_active',)
+    search_fields = ('name',)
+    readonly_fields=("created_at", "updated_at")
+
+    
+    # Attach the nested setup
+    inlines = [ThaliComponentGroupInline]
 
 
 class ProductVariantInline(admin.TabularInline):
@@ -44,26 +79,26 @@ class ProductMediaInline(admin.TabularInline):
     raw_id_fields = ("product", "variant")
 
 
-class ThaliComponentOptionInline(admin.TabularInline):
-    model = ThaliComponentOption
-    fields = (
-        "product_variant",
-        "extra_charge",
-        "is_default",
-    )
-    extra = 1
-    raw_id_fields = ("product_variant",)
+# class ThaliComponentOptionInline(admin.TabularInline):
+#     model = ThaliComponentOption
+#     fields = (
+#         "product_variant",
+#         "extra_charge",
+#         "is_default",
+#     )
+#     extra = 1
+#     raw_id_fields = ("product_variant",)
 
 
-class ThaliComponentGroupInline(admin.StackedInline):
-    model = ThaliComponentGroup
-    fields = (
-        "name",
-        "min_selections",
-        "max_selections",
-        "is_required",
-    )
-    extra = 1
+# class ThaliComponentGroupInline(admin.StackedInline):
+#     model = ThaliComponentGroup
+#     fields = (
+#         "name",
+#         "min_selections",
+#         "max_selections",
+#         "is_required",
+#     )
+#     extra = 1
 
 
 @admin.register(Product)
@@ -73,7 +108,7 @@ class ProductAdmin(admin.ModelAdmin):
         "category",
         "product_type",
         "is_active",
-        "created_at",
+        "display_average_rating",
     )
     list_filter = (
         "is_active",
@@ -92,20 +127,34 @@ class ProductAdmin(admin.ModelAdmin):
     inlines = (ProductVariantInline, ProductMediaInline)
     date_hierarchy = "created_at"
 
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(_avg_rating=Avg("ratings__rating"))
 
-@admin.register(Thali)
-class ThaliAdmin(admin.ModelAdmin):
-    list_display = (
-        "name",
-        "price",
-        "compare_price",
-        "cost_price",
-        "is_active",
-    )
-    list_filter = ("is_active",)
-    search_fields = ("name",)
-    ordering = ("name",)
-    inlines = (ThaliComponentGroupInline,)
+    # Custom Admin Method to display the rating nicely
+    @admin.display(description="Average Rating", ordering="_avg_rating")
+    def display_average_rating(self, obj):
+        # '_avg_rating' comes from our annotated queryset above
+        avg = getattr(obj, "_avg_rating", None)
+        if avg is not None:
+            # Returns a nice bold star rating with 1 decimal place
+            return format_html("<b>⭐ {}</b> / 5.0", round(avg, 1))
+        return "No ratings yet"
+
+
+# @admin.register(Thali)
+# class ThaliAdmin(admin.ModelAdmin):
+#     list_display = (
+#         "name",
+#         "price",
+#         "compare_price",
+#         "cost_price",
+#         "is_active",
+#     )
+#     list_filter = ("is_active",)
+#     search_fields = ("name",)
+#     ordering = ("name",)
+#     inlines = (ThaliComponentGroupInline,)
 
 
 @admin.register(ThaliComponentGroup)
@@ -126,6 +175,7 @@ class ThaliComponentGroupAdmin(admin.ModelAdmin):
         "thali__name",
     )
     raw_id_fields = ("thali",)
+    readonly_fields=("created_at","updated_at")
     inlines = (ThaliComponentOptionInline,)
 
 
@@ -149,6 +199,7 @@ class ThaliComponentOptionAdmin(admin.ModelAdmin):
         "group",
         "product_variant",
     )
+    readonly_fields=("created_at","updated_at")
 
 
 @admin.register(ProductVariant)
@@ -170,6 +221,7 @@ class ProductVariantAdmin(admin.ModelAdmin):
         "is_active",
         "product",
         "quantity_type",
+        "is_thali_component",
     )
     search_fields = (
         "sku",
@@ -264,4 +316,3 @@ class MealSlotAdmin(admin.ModelAdmin):
     list_filter = ("is_active",)
     search_fields = ("name",)
     ordering = ("start_time",)
-    

@@ -2,7 +2,7 @@ from datetime import timezone, datetime
 
 from rest_framework.permissions import IsAuthenticated
 from core.views import DualSerializerViewSet
-from order.models import Order, OrderItems, Return, ReturnItem, Delivery
+from order.models import Order, OrderItems, Return, ReturnItem, Delivery, OrderItemThaliOption
 from order.serializers import (
     OrderRequestSerializer, OrderResponseSerializer,
     ReturnRequestSerializer, ReturnResponseSerializer,
@@ -43,19 +43,36 @@ class OrderViewSet(DualSerializerViewSet):
             subtotal = Decimal('0.00')
             for item in items_data:
                 variant = item.get('variant')
+                thali = item.get('thali')
+                thali_options = item.get('thali_options', [])
                 quantity = item.get('quantity')
-                unit_price = item.get('unit_price')
-                total_price = item.get('total_price') if item.get('total_price') is not None else (Decimal(unit_price) * Decimal(quantity))
 
-                OrderItems.objects.create(
+                if thali:
+                    base_price = Decimal(thali.price)
+                    options_charge = sum(Decimal(opt.extra_charge) for opt in thali_options)
+                    unit_price = base_price + options_charge
+                else:
+                    unit_price = Decimal(variant.price)
+
+                total_price = Decimal(unit_price) * Decimal(quantity)
+
+                order_item = OrderItems.objects.create(
                     order=order,
                     variant=variant,
+                    thali=thali,
                     quantity=quantity,
                     unit_price=unit_price,
                     total_price=total_price,
                 )
 
-                subtotal += Decimal(total_price)
+                if thali:
+                    for opt in thali_options:
+                        OrderItemThaliOption.objects.create(
+                            order_item=order_item,
+                            option=opt
+                        )
+
+                subtotal += total_price
 
             # update order totals (tax, shipping, discount may be set from request)
             order.subtotal = subtotal

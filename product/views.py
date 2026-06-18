@@ -7,7 +7,7 @@ from product.models import (
     ProductMedia,
     Attribute,
     AttributeValue,
-    VariantAttributeValue,
+    VariantAttributeValue,ThaliComponentGroup,ThaliComponentOption
 )
 from product.serializers import (
     ProductRequestSerializer,
@@ -29,7 +29,7 @@ from product.serializers import (
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from category.models import Category
-from django.db.models import Window, F, Prefetch
+from django.db.models import Window, F, Prefetch, Avg, Count
 from django.db.models.functions import RowNumber
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
@@ -57,7 +57,7 @@ class CategoryProductsHomeViewSet(BaseAdminWriteViewSet):
         # Only variants that are NOT thali components
         valid_variants = ProductVariant.objects.filter(is_thali_component=False)
 
-        # Products having at least one non-thali variant
+        # Products having at least one non-thali variant with rating annotations
         annotated_products = (
             Product.objects.filter(is_active=True, variants__is_thali_component=False)
             .distinct()
@@ -66,13 +66,18 @@ class CategoryProductsHomeViewSet(BaseAdminWriteViewSet):
                     expression=RowNumber(),
                     partition_by=[F("category_id")],
                     order_by=F("created_at").desc(),
-                )
+                ),
+                average_rating=Avg("ratings__rating"),
+                rating_count=Count("ratings", distinct=True)
             )
         )
 
         products = Product.objects.filter(
             id__in=annotated_products.values("id")
-        ).prefetch_related(Prefetch("variants", queryset=valid_variants), "images")
+        ).prefetch_related(Prefetch("variants", queryset=valid_variants), "images").annotate(
+            average_rating=Avg("ratings__rating"),
+            rating_count=Count("ratings", distinct=True)
+        )
 
         return Category.objects.filter(is_active=True).prefetch_related(
             Prefetch("products", queryset=products, to_attr="initial_products")
@@ -112,11 +117,26 @@ class ProductViewSet(BaseAdminWriteViewSet):
 
 
 class ThaliViewSet(BaseAdminWriteViewSet):
-    queryset = Thali.objects.all()
     request_serializer_class = ThaliRequestSerializer
     response_serializer_class = ThaliResponseSerializer
     search_fields = ["name"]
     ordering_fields = ["name", "created_at"]
+
+    def get_queryset(self):
+        options_prefetch = Prefetch(
+        'options',
+        queryset=ThaliComponentOption.objects.select_related('product_variant__product')
+    )
+
+        # 2. Middle prefetch: Grab groups and attach the optimized options query inside them
+        groups_prefetch = Prefetch(
+            'component_groups',
+            queryset=ThaliComponentGroup.objects.prefetch_related(options_prefetch)
+        )
+
+        # 3. Execution: Fetch active Thalis with the entire pre-loaded tree structure
+        return Thali.objects.filter(is_active=True).prefetch_related(groups_prefetch)
+        
 
 
 class ProductVariantViewSet(BaseAdminWriteViewSet):

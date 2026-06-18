@@ -19,4 +19,4 @@ class Rating(BaseModel):
             models.Index(fields=["rating"]),
         ]
     def __str__(self):
-        return f"Rating {self.rating} for {self.product.name} by {self.user.username}"
+        return f"Rating {self.rating} for {self.product.title} by {self.user.username}"
