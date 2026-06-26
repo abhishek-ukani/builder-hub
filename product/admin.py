@@ -37,15 +37,25 @@ class ThaliComponentGroupInline(nested_admin.NestedStackedInline):
 # 3. The Top Level: The Main Thali Controller
 @admin.register(Thali)
 class ThaliAdmin(nested_admin.NestedModelAdmin):
-    list_display = ('name', 'price', 'compare_price', 'cost_price', 'is_active')
+    list_display = ('name', 'price', 'compare_price', 'cost_price', 'is_active', 'display_average_rating')
     list_editable = ('is_active', 'price') # Edit basic prices directly from the list view
     list_filter = ('is_active',)
     search_fields = ('name',)
     readonly_fields=("created_at", "updated_at")
 
-    
     # Attach the nested setup
     inlines = [ThaliComponentGroupInline]
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(_avg_rating=Avg("ratings__rating"))
+
+    @admin.display(description="Average Rating", ordering="_avg_rating")
+    def display_average_rating(self, obj):
+        avg = getattr(obj, "_avg_rating", None)
+        if avg is not None:
+            return format_html("<b>⭐ {}</b> / 5.0", round(avg, 1))
+        return "No ratings yet"
 
 
 class ProductVariantInline(admin.TabularInline):
