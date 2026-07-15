@@ -107,6 +107,7 @@ class VerifyEmailView(APIView):
 
 
 class LoginView(APIView):
+    permission_classes = [AllowAny]
     @extend_schema(
         summary="User login",
         description="Authenticate a user and return user info with token",
