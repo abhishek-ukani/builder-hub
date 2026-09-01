@@ -142,3 +142,29 @@ class StockTransferItems(BaseModel):
 
     def __str__(self):
         return f"{self.variant.sku} - {self.quantity}"
+
+
+class DemandForecast(BaseModel):
+    item_id = models.UUIDField(help_text="Product Variant or Thali ID")
+    item_type = models.CharField(
+        max_length=10, 
+        choices=[("variant", "Variant"), ("thali", "Thali")]
+    )
+    item_label = models.CharField(max_length=255)
+    forecast_date = models.DateField()
+    predicted_quantity = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        ordering = ["item_id", "forecast_date"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["item_id", "forecast_date"],
+                name="unique_item_forecast_date"
+            )
+        ]
+        verbose_name = "Demand Forecast"
+        verbose_name_plural = "Demand Forecasts"
+
+    def __str__(self):
+        return f"{self.item_label} ({self.forecast_date}): {self.predicted_quantity}"
+

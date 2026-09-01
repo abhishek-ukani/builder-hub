@@ -1,0 +1,18 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+    <li>
+        <a href="{% url 'admin:inventory_demandforecast_dashboard' %}" style="background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%); color: white; font-weight: bold; padding: 8px 16px; border-radius: 4px; border: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            View Forecast Dashboard
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'admin:inventory_demandforecast_sync' %}" style="background: #10b981; color: white; font-weight: bold; padding: 8px 16px; border-radius: 4px; border: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            Sync Forecasts
+        </a>
+    </li>
+    {{ block.super }}
+{% endblock %}
